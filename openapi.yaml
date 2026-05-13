@@ -1,0 +1,348 @@
+openapi: 3.0.3
+info:
+  title: LeanStock API
+  version: 1.0.0
+  description: |
+    Мультитенантный бэкенд учёта запасов (lean inventory): JWT + refresh rotation,
+    RBAC (ADMIN / MANAGER / USER), верификация email, сброс пароля, очереди BullMQ,
+    фоновые задачи (dead stock, low stock), Prisma ORM без raw SQL.
+servers:
+  - url: http://localhost:3000
+    description: Локально
+tags:
+  - name: Auth
+  - name: Tenants
+  - name: Products
+  - name: Locations
+  - name: Inventory
+  - name: Admin
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    Error:
+      type: object
+      properties:
+        success: { type: boolean, example: false }
+        error:
+          type: object
+          properties:
+            message: { type: string, example: "Insufficient stock" }
+            details: { type: array, items: { type: object } }
+    UserPublic:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        email: { type: string, example: "user@acme.com" }
+        username: { type: string, example: "acme_user" }
+        role: { type: string, enum: [ADMIN, MANAGER, USER] }
+        emailVerifiedAt: { type: string, format: date-time, nullable: true }
+    LoginResponse:
+      type: object
+      properties:
+        accessToken: { type: string }
+        refreshToken: { type: string }
+        user:
+          type: object
+          properties:
+            id: { type: string, format: uuid }
+            email: { type: string }
+            username: { type: string }
+            role: { type: string }
+            emailVerified: { type: boolean, example: true }
+    PaginationOffset:
+      type: object
+      properties:
+        limit: { type: integer, example: 20 }
+        offset: { type: integer, example: 0 }
+        total: { type: integer, example: 42 }
+    PaginationCursor:
+      type: object
+      properties:
+        nextCursor: { type: string, format: uuid, nullable: true }
+        total: { type: integer, example: 100 }
+paths:
+  /health:
+    get:
+      summary: Health check
+      responses:
+        "200":
+          description: OK
+  /api/v1/auth/register:
+    post:
+      tags: [Auth]
+      summary: Регистрация (роль всегда USER; после регистрации — письмо верификации)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, username, password, tenantId]
+              properties:
+                email: { type: string, example: "newuser@acme.com" }
+                username: { type: string, example: "new_user" }
+                password: { type: string, example: "Secure123" }
+                tenantId: { type: string, format: uuid }
+      responses:
+        "201": { description: Created }
+        "409": { description: Конфликт уникальности }
+        "422": { description: Ошибка валидации }
+  /api/v1/auth/login:
+    post:
+      tags: [Auth]
+      summary: Вход (только после подтверждения email)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string }
+                password: { type: string }
+      responses:
+        "200":
+          description: Токены
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean, example: true }
+                  data: { $ref: "#/components/schemas/LoginResponse" }
+        "401": { description: Неверные данные }
+        "403": { description: Email не подтверждён }
+  /api/v1/auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Ротация refresh-токена
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties:
+                refreshToken: { type: string }
+      responses:
+        "200": { description: Новая пара токенов }
+        "401": { description: Невалидный refresh }
+  /api/v1/auth/logout:
+    post:
+      tags: [Auth]
+      summary: Отзыв refresh-токена
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties:
+                refreshToken: { type: string }
+      responses:
+        "200": { description: OK }
+  /api/v1/auth/me:
+    get:
+      tags: [Auth]
+      security: [{ bearerAuth: [] }]
+      summary: Текущий пользователь из JWT
+      responses:
+        "200": { description: OK }
+        "401": { description: Unauthorized }
+  /api/v1/auth/verify-email:
+    get:
+      tags: [Auth]
+      summary: Подтверждение email по ссылке из письма
+      parameters:
+        - in: query
+          name: token
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: Подтверждено }
+        "400": { description: Неверный или просроченный токен }
+  /api/v1/auth/resend-verification:
+    post:
+      tags: [Auth]
+      summary: Повторная отправка письма верификации
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email: { type: string }
+      responses:
+        "200": { description: Всегда успех (антиenumeration) }
+  /api/v1/auth/forgot-password:
+    post:
+      tags: [Auth]
+      summary: Запрос ссылки сброса пароля
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email: { type: string }
+      responses:
+        "200": { description: OK }
+  /api/v1/auth/reset-password:
+    post:
+      tags: [Auth]
+      summary: Установка нового пароля по токену из письма
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, password]
+              properties:
+                token: { type: string }
+                password: { type: string, example: "NewSecure1" }
+      responses:
+        "200": { description: OK }
+        "400": { description: Неверный токен }
+  /api/v1/tenants:
+    get:
+      tags: [Tenants]
+      security: [{ bearerAuth: [] }]
+      summary: Список тенантов (только ADMIN, offset-пагинация)
+      parameters:
+        - in: query
+          name: limit
+          schema: { type: integer, default: 20 }
+        - in: query
+          name: offset
+          schema: { type: integer, default: 0 }
+      responses:
+        "200":
+          description: OK
+        "403": { description: Недостаточно прав }
+    post:
+      tags: [Tenants]
+      security: [{ bearerAuth: [] }]
+      summary: Создать тенант
+      responses:
+        "201": { description: Created }
+  /api/v1/products:
+    get:
+      tags: [Products]
+      security: [{ bearerAuth: [] }]
+      summary: Список товаров (cursor-пагинация)
+      parameters:
+        - in: query
+          name: cursor
+          schema: { type: string, format: uuid }
+        - in: query
+          name: limit
+          schema: { type: integer, default: 20 }
+        - in: query
+          name: search
+          schema: { type: string }
+      responses:
+        "200": { description: OK }
+    post:
+      tags: [Products]
+      security: [{ bearerAuth: [] }]
+      summary: Создать товар (ADMIN)
+      responses:
+        "201": { description: Created }
+        "403": { description: Forbidden }
+  /api/v1/locations:
+    get:
+      tags: [Locations]
+      security: [{ bearerAuth: [] }]
+      summary: Список локаций (offset-пагинация)
+      parameters:
+        - in: query
+          name: limit
+          schema: { type: integer }
+        - in: query
+          name: offset
+          schema: { type: integer }
+      responses:
+        "200": { description: OK }
+    post:
+      tags: [Locations]
+      security: [{ bearerAuth: [] }]
+      summary: Создать локацию (ADMIN)
+      responses:
+        "201": { description: Created }
+  /api/v1/inventory/transfer:
+    post:
+      tags: [Inventory]
+      security: [{ bearerAuth: [] }]
+      summary: Перемещение между складами (ADMIN, MANAGER), ACID Serializable
+      responses:
+        "200": { description: OK }
+        "409": { description: Недостаточно остатка }
+  /api/v1/inventory/sale:
+    post:
+      tags: [Inventory]
+      security: [{ bearerAuth: [] }]
+      summary: Продажа/отгрузка, обновляет lastSoldAt
+      responses:
+        "200": { description: OK }
+  /api/v1/inventory/set:
+    post:
+      tags: [Inventory]
+      security: [{ bearerAuth: [] }]
+      summary: Установка количества (только ADMIN)
+      responses:
+        "200": { description: OK }
+  /api/v1/inventory/report:
+    get:
+      tags: [Inventory]
+      security: [{ bearerAuth: [] }]
+      summary: Отчёт по остаткам (cursor-пагинация)
+      parameters:
+        - in: query
+          name: cursor
+          schema: { type: string, format: uuid }
+        - in: query
+          name: limit
+          schema: { type: integer }
+      responses:
+        "200": { description: OK }
+  /api/v1/admin/users:
+    get:
+      tags: [Admin]
+      security: [{ bearerAuth: [] }]
+      summary: Пользователи тенанта (ADMIN)
+      responses:
+        "200": { description: OK }
+    post:
+      tags: [Admin]
+      security: [{ bearerAuth: [] }]
+      summary: Создать MANAGER в своём тенанте
+      responses:
+        "201": { description: Created }
+  /api/v1/admin/jobs/low-stock-scan:
+    post:
+      tags: [Admin]
+      security: [{ bearerAuth: [] }]
+      summary: Поставить в очередь проверку низких остатков (email через worker)
+      responses:
+        "200": { description: jobId }
+  /api/v1/admin/jobs/dead-stock-decay:
+    post:
+      tags: [Admin]
+      security: [{ bearerAuth: [] }]
+      summary: Поставить в очередь пересчёт dead-stock скидок
+      responses:
+        "200": { description: jobId }
+  /api/v1/admin/jobs/queue-stats:
+    get:
+      tags: [Admin]
+      security: [{ bearerAuth: [] }]
+      summary: Счётчики BullMQ (waiting/active/completed/failed)
+      responses:
+        "200": { description: OK }

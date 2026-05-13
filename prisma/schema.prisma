@@ -1,0 +1,154 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x", "linux-musl-arm64-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Tenant {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  slug      String   @unique
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  users    User[]
+  products Product[]
+  locations Location[]
+
+  @@map("tenants")
+}
+
+enum Role {
+  ADMIN
+  MANAGER
+  USER
+}
+
+model User {
+  id               String    @id @default(uuid())
+  email            String    @unique
+  username         String    @unique
+  passwordHash     String    @map("password_hash")
+  role             Role      @default(USER)
+  tenantId         String    @map("tenant_id")
+  isActive         Boolean   @default(true) @map("is_active")
+  emailVerifiedAt  DateTime? @map("email_verified_at")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  tenant               Tenant               @relation(fields: [tenantId], references: [id])
+  refreshTokens        RefreshToken[]
+  emailVerifications   EmailVerification[]
+  passwordResetTokens PasswordResetToken[]
+
+  @@map("users")
+}
+
+model EmailVerification {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  tokenHash String   @map("token_hash")
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tokenHash])
+  @@map("email_verifications")
+}
+
+model PasswordResetToken {
+  id        String    @id @default(uuid())
+  userId    String    @map("user_id")
+  tokenHash String    @map("token_hash")
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tokenHash])
+  @@map("password_reset_tokens")
+}
+
+model RefreshToken {
+  id        String    @id @default(uuid())
+  token     String    @unique
+  userId    String    @map("user_id")
+  expiresAt DateTime  @map("expires_at")
+  revokedAt DateTime? @map("revoked_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("refresh_tokens")
+}
+
+model Location {
+  id        String   @id @default(uuid())
+  name      String
+  address   String?
+  tenantId  String   @map("tenant_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant    Tenant      @relation(fields: [tenantId], references: [id])
+  inventory Inventory[]
+
+  @@unique([name, tenantId])
+  @@map("locations")
+}
+
+model Product {
+  id          String   @id @default(uuid())
+  sku         String
+  name        String
+  description String?
+  price       Decimal  @db.Decimal(10, 2)
+  costPrice   Decimal  @db.Decimal(10, 2) @map("cost_price")
+  tenantId    String   @map("tenant_id")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  tenant    Tenant      @relation(fields: [tenantId], references: [id])
+  inventory Inventory[]
+
+  @@unique([sku, tenantId])
+  @@map("products")
+}
+
+model Inventory {
+  id          String    @id @default(uuid())
+  productId   String    @map("product_id")
+  locationId  String    @map("location_id")
+  quantity    Int       @default(0)
+  minQuantity Int       @default(0) @map("min_quantity")
+  discountPct Decimal   @default(0) @db.Decimal(5, 2) @map("discount_pct")
+  lastSoldAt  DateTime? @map("last_sold_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  product  Product  @relation(fields: [productId], references: [id])
+  location Location @relation(fields: [locationId], references: [id])
+
+  @@unique([productId, locationId])
+  @@map("inventory")
+}
+
+model TransferLog {
+  id             String   @id @default(uuid())
+  productId      String   @map("product_id")
+  fromLocationId String   @map("from_location_id")
+  toLocationId   String   @map("to_location_id")
+  quantity       Int
+  performedBy    String   @map("performed_by")
+  tenantId       String   @map("tenant_id")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@map("transfer_logs")
+}
