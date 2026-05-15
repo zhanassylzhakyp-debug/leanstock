@@ -1,0 +1,399 @@
+{
+  "info": {
+    "name": "LeanStock API — Full Defense Collection",
+    "_postman_id": "leanstock-v1-defense",
+    "description": "Полная коллекция для устной защиты. Все эндпоинты из openapi.yaml.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:3000", "type": "string" },
+    { "key": "access_token", "value": "", "type": "string" },
+    { "key": "refresh_token", "value": "", "type": "string" },
+    { "key": "tenant_id", "value": "", "type": "string" },
+    { "key": "product_id", "value": "", "type": "string" },
+    { "key": "location_id", "value": "", "type": "string" },
+    { "key": "verify_token", "value": "", "type": "string" },
+    { "key": "reset_token", "value": "", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "🟢 Health",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/health", "host": ["{{base_url}}"], "path": ["health"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🔐 AUTH",
+      "item": [
+        {
+          "name": "1. Register",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/auth/register", "host": ["{{base_url}}"], "path": ["api","v1","auth","register"] },
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"newuser@acme.com\",\n  \"username\": \"new_user\",\n  \"password\": \"Secure123\",\n  \"tenantId\": \"{{tenant_id}}\"\n}" }
+          }
+        },
+        {
+          "name": "2. Verify Email (by token from email)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/verify-email?token={{verify_token}}",
+              "host": ["{{base_url}}"],
+              "path": ["api","v1","auth","verify-email"],
+              "query": [{ "key": "token", "value": "{{verify_token}}" }]
+            }
+          }
+        },
+        {
+          "name": "3. Resend Verification Email",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/auth/resend-verification", "host": ["{{base_url}}"], "path": ["api","v1","auth","resend-verification"] },
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"newuser@acme.com\"\n}" }
+          }
+        },
+        {
+          "name": "4. Login → saves tokens automatically",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "if (json.data && json.data.accessToken) {",
+                  "  pm.collectionVariables.set('access_token', json.data.accessToken);",
+                  "  pm.collectionVariables.set('refresh_token', json.data.refreshToken);",
+                  "  console.log('✅ Tokens saved');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/auth/login", "host": ["{{base_url}}"], "path": ["api","v1","auth","login"] },
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"newuser@acme.com\",\n  \"password\": \"Secure123\"\n}" }
+          }
+        },
+        {
+          "name": "5. Get Me (protected — needs Bearer token)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": { "raw": "{{base_url}}/api/v1/auth/me", "host": ["{{base_url}}"], "path": ["api","v1","auth","me"] }
+          }
+        },
+        {
+          "name": "6. Refresh Token → rotates tokens",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "if (json.data && json.data.accessToken) {",
+                  "  pm.collectionVariables.set('access_token', json.data.accessToken);",
+                  "  pm.collectionVariables.set('refresh_token', json.data.refreshToken);",
+                  "  console.log('✅ Tokens rotated');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/auth/refresh", "host": ["{{base_url}}"], "path": ["api","v1","auth","refresh"] },
+            "body": { "mode": "raw", "raw": "{\n  \"refreshToken\": \"{{refresh_token}}\"\n}" }
+          }
+        },
+        {
+          "name": "7. Logout",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/auth/logout", "host": ["{{base_url}}"], "path": ["api","v1","auth","logout"] },
+            "body": { "mode": "raw", "raw": "{\n  \"refreshToken\": \"{{refresh_token}}\"\n}" }
+          }
+        },
+        {
+          "name": "8. Forgot Password (sends email)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/auth/forgot-password", "host": ["{{base_url}}"], "path": ["api","v1","auth","forgot-password"] },
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"newuser@acme.com\"\n}" }
+          }
+        },
+        {
+          "name": "9. Reset Password",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/auth/reset-password", "host": ["{{base_url}}"], "path": ["api","v1","auth","reset-password"] },
+            "body": { "mode": "raw", "raw": "{\n  \"token\": \"{{reset_token}}\",\n  \"password\": \"NewSecure1\"\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🏢 TENANTS",
+      "item": [
+        {
+          "name": "Get All Tenants (ADMIN, offset pagination)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/tenants?limit=20&offset=0",
+              "host": ["{{base_url}}"], "path": ["api","v1","tenants"],
+              "query": [{ "key": "limit", "value": "20" }, { "key": "offset", "value": "0" }]
+            }
+          }
+        },
+        {
+          "name": "Create Tenant (ADMIN)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "if (json.data && json.data.id) {",
+                  "  pm.collectionVariables.set('tenant_id', json.data.id);",
+                  "  console.log('✅ tenant_id saved:', json.data.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/tenants", "host": ["{{base_url}}"], "path": ["api","v1","tenants"] },
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Acme Corp\",\n  \"slug\": \"acme\"\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "📦 PRODUCTS",
+      "item": [
+        {
+          "name": "Get All Products (cursor pagination)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/products?limit=20",
+              "host": ["{{base_url}}"], "path": ["api","v1","products"],
+              "query": [
+                { "key": "limit", "value": "20" },
+                { "key": "cursor", "value": "", "disabled": true },
+                { "key": "search", "value": "", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Product (ADMIN)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "if (json.data && json.data.id) {",
+                  "  pm.collectionVariables.set('product_id', json.data.id);",
+                  "  console.log('✅ product_id saved:', json.data.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/products", "host": ["{{base_url}}"], "path": ["api","v1","products"] },
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Bolt M8\",\n  \"sku\": \"BOLT-M8-001\",\n  \"unit\": \"pcs\",\n  \"lowStockThreshold\": 10,\n  \"tenantId\": \"{{tenant_id}}\"\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "📍 LOCATIONS",
+      "item": [
+        {
+          "name": "Get All Locations (offset pagination)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/locations?limit=20&offset=0",
+              "host": ["{{base_url}}"], "path": ["api","v1","locations"],
+              "query": [{ "key": "limit", "value": "20" }, { "key": "offset", "value": "0" }]
+            }
+          }
+        },
+        {
+          "name": "Create Location (ADMIN)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "if (json.data && json.data.id) {",
+                  "  pm.collectionVariables.set('location_id', json.data.id);",
+                  "  console.log('✅ location_id saved:', json.data.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/locations", "host": ["{{base_url}}"], "path": ["api","v1","locations"] },
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Warehouse A\",\n  \"description\": \"Main storage\",\n  \"tenantId\": \"{{tenant_id}}\"\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🔄 INVENTORY",
+      "item": [
+        {
+          "name": "Set Inventory (ADMIN only)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/inventory/set", "host": ["{{base_url}}"], "path": ["api","v1","inventory","set"] },
+            "body": { "mode": "raw", "raw": "{\n  \"productId\": \"{{product_id}}\",\n  \"locationId\": \"{{location_id}}\",\n  \"quantity\": 100\n}" }
+          }
+        },
+        {
+          "name": "Transfer Stock (ADMIN/MANAGER) — ACID Serializable",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/inventory/transfer", "host": ["{{base_url}}"], "path": ["api","v1","inventory","transfer"] },
+            "body": { "mode": "raw", "raw": "{\n  \"productId\": \"{{product_id}}\",\n  \"fromLocationId\": \"{{location_id}}\",\n  \"toLocationId\": \"PASTE_SECOND_LOCATION_ID\",\n  \"quantity\": 10\n}" }
+          }
+        },
+        {
+          "name": "Sale / Shipment (ADMIN/MANAGER)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/inventory/sale", "host": ["{{base_url}}"], "path": ["api","v1","inventory","sale"] },
+            "body": { "mode": "raw", "raw": "{\n  \"productId\": \"{{product_id}}\",\n  \"locationId\": \"{{location_id}}\",\n  \"quantity\": 5\n}" }
+          }
+        },
+        {
+          "name": "Inventory Report (cursor pagination)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/inventory/report?limit=20",
+              "host": ["{{base_url}}"], "path": ["api","v1","inventory","report"],
+              "query": [
+                { "key": "limit", "value": "20" },
+                { "key": "cursor", "value": "", "disabled": true }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "⚙️ ADMIN",
+      "item": [
+        {
+          "name": "Get Users in Tenant (ADMIN)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/users?limit=20&offset=0",
+              "host": ["{{base_url}}"], "path": ["api","v1","admin","users"],
+              "query": [{ "key": "limit", "value": "20" }, { "key": "offset", "value": "0" }]
+            }
+          }
+        },
+        {
+          "name": "Create Manager (ADMIN)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/admin/users", "host": ["{{base_url}}"], "path": ["api","v1","admin","users"] },
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"manager@acme.com\",\n  \"username\": \"acme_manager\",\n  \"password\": \"Manager123\",\n  \"role\": \"MANAGER\"\n}" }
+          }
+        },
+        {
+          "name": "Trigger Low Stock Scan → email via BullMQ worker",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": { "raw": "{{base_url}}/api/v1/admin/jobs/low-stock-scan", "host": ["{{base_url}}"], "path": ["api","v1","admin","jobs","low-stock-scan"] }
+          }
+        },
+        {
+          "name": "Trigger Dead Stock Decay",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": { "raw": "{{base_url}}/api/v1/admin/jobs/dead-stock-decay", "host": ["{{base_url}}"], "path": ["api","v1","admin","jobs","dead-stock-decay"] }
+          }
+        },
+        {
+          "name": "Queue Stats — BullMQ (waiting/active/completed/failed)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": { "raw": "{{base_url}}/api/v1/admin/jobs/queue-stats", "host": ["{{base_url}}"], "path": ["api","v1","admin","jobs","queue-stats"] }
+          }
+        }
+      ]
+    }
+  ]
+}

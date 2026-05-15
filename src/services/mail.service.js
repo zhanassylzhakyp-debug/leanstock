@@ -1,6 +1,6 @@
 const nodemailer = require('nodemailer');
-const env = require('./env');
-const logger = require('./logger');
+const env = require('../config/env');
+const logger = require('../config/logger');
 
 let transporter;
 
@@ -21,9 +21,16 @@ const getTransporter = () => {
   return transporter;
 };
 
+const smtpConfigured = () =>
+  Boolean(env.SMTP_HOST && String(env.SMTP_HOST).trim() && env.SMTP_USER && env.SMTP_PASS);
+
 const sendMail = async ({ to, subject, text, html }) => {
   if (env.DISABLE_EMAIL_SEND === 'true') {
     logger.info('[mail] DISABLE_EMAIL_SEND=true — skipping SMTP', { to, subject });
+    return { skipped: true };
+  }
+  if (env.NODE_ENV === 'development' && !smtpConfigured()) {
+    logger.info('[mail] development without SMTP — skipping send', { to, subject });
     return { skipped: true };
   }
   const t = getTransporter();

@@ -27,11 +27,13 @@ const envSchema = z
   .superRefine((data, ctx) => {
     if (data.NODE_ENV === 'test') return;
     if (data.DISABLE_EMAIL_SEND === 'true') return;
+    // В development можно поднять API без SMTP — письма просто не уйдут (см. mail.service).
+    if (data.NODE_ENV === 'development') return;
     if (!data.SMTP_HOST || !data.SMTP_USER || !data.SMTP_PASS) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message:
-          'Для отправки писем задайте SMTP_HOST, SMTP_USER, SMTP_PASS или установите DISABLE_EMAIL_SEND=true',
+          'В production задайте SMTP_HOST, SMTP_USER, SMTP_PASS или DISABLE_EMAIL_SEND=true',
         path: ['SMTP_HOST'],
       });
     }
@@ -48,6 +50,16 @@ if (!parsed.success) {
 }
 
 const data = parsed.data;
+
+if (
+  data.NODE_ENV === 'development' &&
+  data.DISABLE_EMAIL_SEND !== 'true' &&
+  (!data.SMTP_HOST || !data.SMTP_USER || !data.SMTP_PASS)
+) {
+  console.warn(
+    '⚠️  SMTP не задан — в development письма не отправляются (API и worker стартуют). Для реальной почты добавьте SMTP_* или DISABLE_EMAIL_SEND=true.'
+  );
+}
 
 module.exports = {
   ...data,

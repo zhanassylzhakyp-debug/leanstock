@@ -130,15 +130,17 @@ describe('POST /api/v1/auth/refresh', () => {
     const res = await request(app).post('/api/v1/auth/refresh').send({ refreshToken });
     expect(res.status).toBe(200);
     expect(res.body.data.accessToken).toBeDefined();
+    // ⬇️ Сохраняем новый токен после ротации
+    refreshToken = res.body.data.refreshToken;
   });
 });
 
 describe('POST /api/v1/auth/logout', () => {
   it('revokes the refresh token', async () => {
+    // теперь используем обновлённый refreshToken
     const res = await request(app).post('/api/v1/auth/logout').send({ refreshToken });
     expect(res.status).toBe(200);
 
-    // After logout, refresh should fail
     const refreshRes = await request(app).post('/api/v1/auth/refresh').send({ refreshToken });
     expect(refreshRes.status).toBe(401);
   });

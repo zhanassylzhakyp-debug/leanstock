@@ -12,8 +12,9 @@ const start = async () => {
 
   if (env.NODE_ENV !== 'test') {
     try {
-      await redis.connect();
-      logger.info('Redis connected for rate limiting / queues');
+      // lazyConnect: нельзя вызывать connect() повторно — ping один раз устанавливает соединение
+      await redis.ping();
+      logger.info('Redis ready for rate limiting / queues');
     } catch (e) {
       logger.error('Redis connection failed', { error: e.message });
       process.exit(1);

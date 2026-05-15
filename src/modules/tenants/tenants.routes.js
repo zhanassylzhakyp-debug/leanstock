@@ -9,7 +9,7 @@ const router = Router();
 
 const createTenantSchema = z.object({
   name: z.string().min(2),
-  slug: z.string().min(2).regex(/^[a-z0-9-]+$/, 'Slug must be lowercase letters, numbers, hyphens'),
+  slug: z.string().min(2).regex(/^[a-z0-9-]+$/),
 });
 
 const listTenantsQuery = z.object({
@@ -17,6 +17,28 @@ const listTenantsQuery = z.object({
   offset: z.coerce.number().min(0).default(0),
 });
 
+/**
+ * @swagger
+ * /tenants:
+ *   post:
+ *     tags: [Tenants]
+ *     summary: Create tenant (ADMIN only)
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [name, slug]
+ *             properties:
+ *               name: { type: string, example: "Acme Corp" }
+ *               slug: { type: string, example: "acme-corp" }
+ *     responses:
+ *       201: { description: Created }
+ *       403: { description: Forbidden }
+ */
 router.post('/', authenticate, authorize('ADMIN'), async (req, res, next) => {
   try {
     const data = createTenantSchema.parse(req.body);
@@ -27,6 +49,25 @@ router.post('/', authenticate, authorize('ADMIN'), async (req, res, next) => {
   }
 });
 
+/**
+ * @swagger
+ * /tenants:
+ *   get:
+ *     tags: [Tenants]
+ *     summary: List all tenants (ADMIN only, offset pagination)
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema: { type: integer, default: 20 }
+ *       - in: query
+ *         name: offset
+ *         schema: { type: integer, default: 0 }
+ *     responses:
+ *       200: { description: OK }
+ *       403: { description: Forbidden }
+ */
 router.get('/', authenticate, authorize('ADMIN'), async (req, res, next) => {
   try {
     const { limit, offset } = listTenantsQuery.parse(req.query);
