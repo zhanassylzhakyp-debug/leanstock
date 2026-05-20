@@ -15,9 +15,13 @@ model Tenant {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  users    User[]
-  products Product[]
-  locations Location[]
+  users         User[]
+  products      Product[]
+  locations     Location[]
+  suppliers     Supplier[]
+  purchaseOrders PurchaseOrder[]
+  reservations  Reservation[]
+  decayRules    TenantDecayRules?
 
   @@map("tenants")
 }
@@ -150,5 +154,111 @@ model TransferLog {
   tenantId       String   @map("tenant_id")
   createdAt      DateTime @default(now()) @map("created_at")
 
+  @@index([productId, tenantId, createdAt])
   @@map("transfer_logs")
+}
+
+model TenantDecayRules {
+  id            String  @id @default(uuid())
+  tenantId      String  @unique @map("tenant_id")
+  tier1Days     Int     @default(30) @map("tier1_days")
+  tier2Days     Int     @default(60) @map("tier2_days")
+  tier3Days     Int     @default(90) @map("tier3_days")
+  tier1Discount Decimal @default(10) @db.Decimal(5, 2) @map("tier1_discount")
+  tier2Discount Decimal @default(25) @db.Decimal(5, 2) @map("tier2_discount")
+  tier3Discount Decimal @default(40) @db.Decimal(5, 2) @map("tier3_discount")
+  maxDiscount   Decimal @default(50) @db.Decimal(5, 2) @map("max_discount")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("tenant_decay_rules")
+}
+
+model Supplier {
+  id        String   @id @default(uuid())
+  name      String
+  email     String?
+  phone     String?
+  tenantId  String   @map("tenant_id")
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant         Tenant          @relation(fields: [tenantId], references: [id])
+  purchaseOrders PurchaseOrder[]
+
+  @@unique([name, tenantId])
+  @@map("suppliers")
+}
+
+enum PurchaseOrderStatus {
+  DRAFT
+  SENT
+  RECEIVED
+  CANCELLED
+}
+
+model PurchaseOrder {
+  id          String              @id @default(uuid())
+  poNumber    String              @map("po_number")
+  supplierId  String              @map("supplier_id")
+  locationId  String              @map("location_id")
+  tenantId    String              @map("tenant_id")
+  status      PurchaseOrderStatus @default(DRAFT)
+  notes       String?
+  sentAt      DateTime?           @map("sent_at")
+  receivedAt  DateTime?           @map("received_at")
+  createdBy   String              @map("created_by")
+  createdAt   DateTime            @default(now()) @map("created_at")
+  updatedAt   DateTime            @updatedAt @map("updated_at")
+
+  supplier Supplier            @relation(fields: [supplierId], references: [id])
+  tenant   Tenant              @relation(fields: [tenantId], references: [id])
+  lines    PurchaseOrderLine[]
+
+  @@unique([poNumber, tenantId])
+  @@map("purchase_orders")
+}
+
+model PurchaseOrderLine {
+  id              String  @id @default(uuid())
+  purchaseOrderId String  @map("purchase_order_id")
+  productId       String  @map("product_id")
+  quantity        Int
+  unitCost        Decimal @db.Decimal(10, 2) @map("unit_cost")
+
+  purchaseOrder PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+
+  @@unique([purchaseOrderId, productId])
+  @@map("purchase_order_lines")
+}
+
+enum ReservationStatus {
+  PENDING
+  CONFIRMED
+  RELEASED
+  EXPIRED
+}
+
+model Reservation {
+  id         String            @id @default(uuid())
+  productId  String            @map("product_id")
+  locationId String            @map("location_id")
+  quantity   Int
+  userId     String            @map("user_id")
+  tenantId   String            @map("tenant_id")
+  status     ReservationStatus @default(PENDING)
+  expiresAt  DateTime          @map("expires_at")
+  confirmedAt DateTime?        @map("confirmed_at")
+  releasedAt DateTime?         @map("released_at")
+  createdAt  DateTime          @default(now()) @map("created_at")
+  updatedAt  DateTime          @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@index([status, expiresAt])
+  @@index([productId, locationId, status])
+  @@map("reservations")
 }

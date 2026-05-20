@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LeanStock Demo</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header>
+    <h1>LeanStock</h1>
+    <p class="tagline">Multi-tenant inventory management demo</p>
+    <div id="user-bar" class="hidden">
+      <span id="user-info"></span>
+      <button id="logout-btn" class="secondary">Logout</button>
+    </div>
+  </header>
+
+  <main>
+    <section id="auth-section" class="card">
+      <h2>Authentication</h2>
+      <div class="tabs">
+        <button class="tab active" data-tab="login">Login</button>
+        <button class="tab" data-tab="register">Register</button>
+        <button class="tab" data-tab="reset">Password Reset</button>
+      </div>
+      <div id="login-panel" class="panel">
+        <input id="login-email" type="email" placeholder="Email" />
+        <input id="login-password" type="password" placeholder="Password" />
+        <button id="login-btn">Login</button>
+      </div>
+      <div id="register-panel" class="panel hidden">
+        <input id="reg-email" type="email" placeholder="Email" />
+        <input id="reg-username" type="text" placeholder="Username" />
+        <input id="reg-password" type="password" placeholder="Password (8+ chars, A-Z, 0-9)" />
+        <input id="reg-tenant-id" type="text" placeholder="Tenant ID (from seed or admin)" />
+        <button id="register-btn">Register</button>
+        <p class="hint">After register check your email for verification link.</p>
+      </div>
+      <div id="reset-panel" class="panel hidden">
+        <input id="reset-email" type="email" placeholder="Email for reset link" />
+        <button id="forgot-btn">Send reset email</button>
+      </div>
+      <div id="auth-message" class="message"></div>
+    </section>
+
+    <section id="app-section" class="hidden">
+      <nav class="nav">
+        <button class="nav-btn active" data-view="dashboard">Dashboard</button>
+        <button class="nav-btn" data-view="products">Products</button>
+        <button class="nav-btn" data-view="inventory">Inventory</button>
+        <button class="nav-btn" data-view="transfer">Transfer</button>
+        <button class="nav-btn" data-view="reservations">Reservations</button>
+        <button class="nav-btn" data-view="suppliers">Suppliers & PO</button>
+        <button class="nav-btn" data-view="forecast">Forecast</button>
+        <button class="nav-btn admin-only hidden" data-view="admin">Admin</button>
+      </nav>
+
+      <div id="dashboard-view" class="view">
+        <h2>Dashboard</h2>
+        <div id="stats" class="grid"></div>
+      </div>
+
+      <div id="products-view" class="view hidden">
+        <h2>Products</h2>
+        <div class="admin-only hidden form-row">
+          <input id="new-sku" placeholder="SKU" />
+          <input id="new-name" placeholder="Name" />
+          <input id="new-price" type="number" placeholder="Price" step="0.01" />
+          <input id="new-cost" type="number" placeholder="Cost" step="0.01" />
+          <button id="create-product-btn">Create Product</button>
+        </div>
+        <div id="products-list"></div>
+      </div>
+
+      <div id="inventory-view" class="view hidden">
+        <h2>Inventory Report</h2>
+        <button id="refresh-inventory">Refresh</button>
+        <div id="inventory-list"></div>
+      </div>
+
+      <div id="transfer-view" class="view hidden">
+        <h2>Transfer / Sale</h2>
+        <div class="form-grid">
+          <input id="tr-product-id" placeholder="Product ID" />
+          <input id="tr-from-loc" placeholder="From Location ID" />
+          <input id="tr-to-loc" placeholder="To Location ID" />
+          <input id="tr-qty" type="number" placeholder="Quantity" min="1" />
+          <button id="transfer-btn">Transfer</button>
+          <button id="sale-btn" class="secondary">Record Sale</button>
+        </div>
+        <div id="transfer-result" class="message"></div>
+      </div>
+
+      <div id="reservations-view" class="view hidden">
+        <h2>Checkout Reservations</h2>
+        <div class="form-grid">
+          <input id="res-product-id" placeholder="Product ID" />
+          <input id="res-location-id" placeholder="Location ID" />
+          <input id="res-qty" type="number" placeholder="Qty" min="1" />
+          <button id="reserve-btn">Reserve (Redis lock)</button>
+        </div>
+        <div id="reservations-list"></div>
+      </div>
+
+      <div id="suppliers-view" class="view hidden">
+        <h2>Suppliers & Purchase Orders</h2>
+        <div class="form-grid manager-only">
+          <input id="sup-name" placeholder="Supplier name" />
+          <input id="sup-email" placeholder="Supplier email" />
+          <button id="create-supplier-btn">Add Supplier</button>
+        </div>
+        <div id="suppliers-list"></div>
+        <hr />
+        <h3>Create Purchase Order</h3>
+        <div class="form-grid manager-only">
+          <input id="po-supplier-id" placeholder="Supplier ID" />
+          <input id="po-location-id" placeholder="Receive Location ID" />
+          <input id="po-product-id" placeholder="Product ID" />
+          <input id="po-qty" type="number" placeholder="Qty" min="1" />
+          <input id="po-cost" type="number" placeholder="Unit cost" step="0.01" />
+          <button id="create-po-btn">Create PO (DRAFT)</button>
+        </div>
+        <div id="po-list"></div>
+      </div>
+
+      <div id="forecast-view" class="view hidden">
+        <h2>Reorder Forecast (Moving Average)</h2>
+        <button id="load-forecast">Load Forecast</button>
+        <div id="forecast-list"></div>
+      </div>
+
+      <div id="admin-view" class="view hidden">
+        <h2>Admin Panel</h2>
+        <div class="form-grid">
+          <button id="trigger-decay">Trigger Dead Stock Decay</button>
+          <button id="trigger-low-stock">Trigger Low Stock Scan</button>
+          <button id="load-queue-stats">Queue Stats</button>
+        </div>
+        <pre id="admin-output"></pre>
+      </div>
+
+      <div id="app-message" class="message"></div>
+    </section>
+  </main>
+
+  <footer>
+    <a href="/docs" target="_blank">Swagger API Docs</a> ·
+    <a href="/health" target="_blank">Health</a>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>

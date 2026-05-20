@@ -1,35 +1,93 @@
 version: '3.9'
 
 services:
-  db:
+  postgres:
     image: postgres:15-alpine
-    container_name: leanstock-db
     restart: always
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: "1234"
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-1234}
       POSTGRES_DB: leanstock
-    ports:
-      - '5432:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
       interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 10
 
   redis:
     image: redis:7-alpine
-    container_name: leanstock-redis
     restart: always
-    ports:
-      - '6379:6379'
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ['CMD', 'redis-cli', 'ping']
       interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 10
+
+  api:
+    build: .
+    restart: always
+    command: sh -c "npx prisma migrate deploy && node prisma/seed.js && node src/server.js"
+    environment:
+      PORT: ${BACKEND_PORT:-3000}
+      NODE_ENV: ${ENVIRONMENT:-production}
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-1234}@postgres:5432/leanstock
+      REDIS_URL: redis://redis:6379
+      JWT_ACCESS_SECRET: ${JWT_SECRET_KEY:-change_me_min_16_chars_access}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET_KEY:-change_me_min_16_chars_refresh}
+      ALLOWED_ORIGINS: ${CORS_ORIGINS:-http://localhost:8080}
+      APP_PUBLIC_URL: ${APP_PUBLIC_URL:-http://localhost:8080}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-${EMAIL_API_KEY:-}}
+      SMTP_PASS: ${SMTP_PASS:-${EMAIL_API_KEY:-}}
+      SMTP_FROM: ${EMAIL_FROM_ADDRESS:-LeanStock <noreply@leanstock.local>}
+      DISABLE_EMAIL_SEND: ${DISABLE_EMAIL_SEND:-false}
+      SKIP_EMAIL_VERIFICATION: ${SKIP_EMAIL_VERIFICATION:-false}
+    ports:
+      - '${BACKEND_PORT:-3000}:3000'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  worker:
+    build: .
+    restart: always
+    command: sh -c "npx prisma migrate deploy && node src/workers/index.js"
+    environment:
+      NODE_ENV: ${ENVIRONMENT:-production}
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-1234}@postgres:5432/leanstock
+      REDIS_URL: redis://redis:6379
+      JWT_ACCESS_SECRET: ${JWT_SECRET_KEY:-change_me_min_16_chars_access}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET_KEY:-change_me_min_16_chars_refresh}
+      ALLOWED_ORIGINS: ${CORS_ORIGINS:-http://localhost:8080}
+      APP_PUBLIC_URL: ${APP_PUBLIC_URL:-http://localhost:8080}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-${EMAIL_API_KEY:-}}
+      SMTP_PASS: ${SMTP_PASS:-${EMAIL_API_KEY:-}}
+      SMTP_FROM: ${EMAIL_FROM_ADDRESS:-LeanStock <noreply@leanstock.local>}
+      DISABLE_EMAIL_SEND: ${DISABLE_EMAIL_SEND:-false}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      api:
+        condition: service_started
+
+  frontend:
+    build: ./frontend
+    restart: always
+    ports:
+      - '${FRONTEND_PORT:-8080}:80'
+    environment:
+      API_URL: http://localhost:${BACKEND_PORT:-3000}
+    depends_on:
+      - api
 
 volumes:
   postgres_data:

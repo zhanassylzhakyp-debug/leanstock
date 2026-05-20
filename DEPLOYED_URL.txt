@@ -1,0 +1,4 @@
+# Replace with your DeployRocks URL after deployment, e.g.:
+# https://your-app.deployrocks.com
+
+DEPLOYED_URL=pending — deploy to https://dashboard.deployrocks.com and update this file

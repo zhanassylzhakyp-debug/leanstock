@@ -1,0 +1,24 @@
+[ ] Application is LIVE on dashboard.deployrocks.com with working public URL
+[ ] docker compose up boots entire stack (backend + frontend + postgres + redis) locally
+[ ] pytest / jest runs and passes with full test suite
+[ ] Swagger UI / API docs is accessible on the deployed URL and covers ALL endpoints
+[ ] All auth endpoints work on deployed frontend: register, login, logout, refresh, RBAC protected routes
+[ ] Email verification sends REAL email on signup using 3rd party service
+[ ] Password reset sends REAL email with working reset link
+[ ] At least 3 business event emails are implemented and queued via background worker
+[ ] Frontend demo consumes real backend API and demonstrates all major workflows
+[ ] All business logic endpoints from blueprint are implemented and testable
+[ ] Background workers are running and processing jobs
+[ ] No raw SQL queries exist in codebase (ORM only)
+[ ] Video link is accessible and 4-6 minutes long
+[ ] Postman collection with ALL endpoints loaded in separate tabs ready for defense
+[ ] I am the sole author of the architectural decisions in this code
+
+# LeanStock track-specific
+[ ] SELECT FOR UPDATE / Serializable + Redis locks on inventory mutations
+[ ] Dead stock decay cron with configurable rules (GET/PUT /admin/decay-rules)
+[ ] Multi-tenant isolation: tenant_id filtering on every query
+[ ] Forecasting endpoint returning reorder suggestions (GET /inventory/forecast)
+[ ] Reservation system with Redis locks + TTL auto-release (cron every 5 min)
+[ ] Full supplier and purchase order workflow (DRAFT → SENT → RECEIVED)
+[ ] Emails: low-stock alert, purchase order confirmation, inventory transfer receipt

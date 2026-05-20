@@ -1,4 +1,5 @@
 const { applyDeadStockDecay, scanLowStockAndNotify } = require('../modules/inventory/inventory.service');
+const { expireStaleReservations } = require('../modules/reservations/reservations.service');
 const logger = require('../config/logger');
 
 async function processMaintenanceJob(job) {
@@ -8,6 +9,9 @@ async function processMaintenanceJob(job) {
   }
   if (job.name === 'low-stock-scan') {
     return scanLowStockAndNotify();
+  }
+  if (job.name === 'reservation-expiry') {
+    return expireStaleReservations();
   }
   throw new Error(`Unknown maintenance job: ${job.name}`);
 }

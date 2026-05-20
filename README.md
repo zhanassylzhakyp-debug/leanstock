@@ -13,13 +13,24 @@
 
 ## Быстрый старт
 
-### 1. Инфраструктура
+### 1. Полный стек одной командой (рекомендуется для финальной сдачи)
 
 ```bash
-docker compose up -d
+cp .env.example .env
+# Заполните JWT_*, SMTP_* (SendGrid/Mailgun), CORS_ORIGINS
+docker compose up --build
 ```
 
-Поднимется Postgres (`leanstock`) и Redis.
+Поднимается: **postgres**, **redis**, **api**, **worker**, **frontend**.
+
+- Frontend demo: `http://localhost:8080`
+- API / Swagger: `http://localhost:3000/docs` (или через frontend proxy `/docs`)
+
+### 1b. Только инфраструктура (локальная разработка)
+
+```bash
+docker compose up -d postgres redis
+```
 
 ### 2. Переменные окружения
 
@@ -64,12 +75,13 @@ npm run worker
 Воркер обрабатывает очереди:
 
 - `{QUEUE_PREFIX}-email` — верификация, сброс пароля, low stock, уведомление о перемещении, welcome manager  
-- `{QUEUE_PREFIX}-maintenance` — `dead-stock-decay`, `low-stock-scan`  
+- `{QUEUE_PREFIX}-maintenance` — `dead-stock-decay`, `low-stock-scan`, `reservation-expiry`  
 
 **Cron (в процессе API):**
 
 - `02:00` — постановка в очередь `dead-stock-decay`  
 - `08:00` — постановка в очередь `low-stock-scan`  
+- `*/5 * * * *` — `reservation-expiry` (авто-освобождение просроченных резервов)
 
 Ручной триггер (роль **ADMIN** в своём тенанте): `POST /api/v1/admin/jobs/dead-stock-decay`, `POST /api/v1/admin/jobs/low-stock-scan`.  
 Статистика очередей: `GET /api/v1/admin/jobs/queue-stats`.
@@ -79,22 +91,29 @@ npm run worker
 | Роль      | Возможности (кратко) |
 |-----------|----------------------|
 | **ADMIN** | Товары CRUD, локации, установка остатков, создание MANAGER, триггеры jobs, создание тенантов (глобальный список) |
-| **MANAGER** | Перемещения, продажи/отгрузки (`/inventory/sale`), чтение отчётов |
-| **USER**  | Чтение каталога и отчётов, без изменения остатков |
+| **MANAGER** | Перемещения, продажи, suppliers/PO, forecast, резервы, чтение отчётов |
+| **USER**  | Чтение каталога, отчётов, создание резервов (checkout) |
 
-Несоответствие роли → **403**.
+Несоответствие роли → **403**. Публичная регистрация создаёт только **USER**.
 
-Публичная регистрация создаёт только **USER** (роль ADMIN/MANAGER — через seed или `POST /api/v1/admin/users`).
+## Auth-поток
 
-## Auth-поток для защиты
+1. `POST /api/v1/auth/register` → письмо VERIFY_EMAIL  
+2. `GET /api/v1/auth/verify-email?token=...`  
+3. `POST /api/v1/auth/login` → JWT + refresh  
+4. `POST /api/v1/auth/refresh`, `POST /api/v1/auth/logout`  
+5. `POST /api/v1/auth/forgot-password` → `POST /api/v1/auth/reset-password`
 
-1. `POST /api/v1/auth/register` — создаёт пользователя, в очередь уходит письмо **VERIFY_EMAIL** (в `NODE_ENV=test` email считается подтверждённым сразу).  
-2. `GET /api/v1/auth/verify-email?token=...` — подтверждение.  
-3. `POST /api/v1/auth/login` — выдача JWT + refresh (без подтверждённого email — **403**).  
-4. Защищённые маршруты: `Authorization: Bearer <access>`.  
-5. `POST /api/v1/auth/refresh` — ротация refresh.  
-6. `POST /api/v1/auth/logout` — отзыв refresh.  
-7. Сброс пароля: `POST /forgot-password` → письмо → `POST /reset-password`.
+## LeanStock — ключевые фичи (финальная сдача)
+
+| Фича | Endpoint |
+|------|----------|
+| Forecast (moving average) | `GET /api/v1/inventory/forecast` |
+| Reservations + Redis lock | `POST /api/v1/reservations`, `POST .../confirm`, `DELETE .../id` |
+| Suppliers CRUD | `GET/POST/PATCH/DELETE /api/v1/suppliers` |
+| Purchase orders | `POST /api/v1/purchase-orders`, `POST .../send`, `POST .../receive` |
+| Configurable decay rules | `GET/PUT /api/v1/admin/decay-rules` |
+| Frontend demo | `frontend/` — SPA на vanilla JS, прокси через nginx |
 
 ## Письма (бизнес-события, ≥3)
 
@@ -105,6 +124,7 @@ npm run worker
 3. Алерт низкого остатка (`low-stock-scan`)  
 4. Подтверждение перемещения (TRANSFER_COMPLETE)  
 5. Приветствие нового MANAGER  
+6. **Подтверждение заказа поставщику (PURCHASE_ORDER_CONFIRM)**
 
 ## Пагинация
 
@@ -125,9 +145,17 @@ npm test
 - **Email:** API не ждёт SMTP — только постановка в BullMQ.  
 - **Секреты:** только через env, шаблон — `.env.example`.  
 
+## Деплой на DeployRocks
+
+1. Залейте репозиторий на GitHub (`zhanassylzhakyp-debug/leanstock`).
+2. Зарегистрируйтесь на [dashboard.deployrocks.com](https://dashboard.deployrocks.com), подключите GitHub.
+3. Выберите репозиторий, deployment type: **Docker Compose**.
+4. Задайте env vars из `.env.example` (особенно `JWT_SECRET_KEY`, `SMTP_*`, `CORS_ORIGINS`, `APP_PUBLIC_URL`).
+5. После деплоя сохраните URL в **`DEPLOYED_URL.txt`** и ссылку на видео в **`VIDEO_LINK.txt`**.
+
 ## Postman / устная защита
 
-Подготовьте отдельные вкладки: все маршруты `auth`, бизнес-логика (`products`, `locations`, `inventory`), `admin` + триггеры `jobs`, демонстрация воркера и письма в реальном ящике.
+Подготовьте отдельные вкладки: auth, products, locations, inventory, forecast, reservations, suppliers, purchase-orders, admin/jobs. Откройте live frontend + Swagger + Postman на защите.
 
 ## Лицензия
 

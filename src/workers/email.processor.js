@@ -33,6 +33,16 @@ const buildBody = (job) => {
         text: `Здравствуйте, ${payload.username}.\n\nВам выдана роль MANAGER в LeanStock.\nВход: ${payload.loginUrl}`,
         html: `<p>Роль <b>MANAGER</b> для ${payload.username}.</p><p><a href="${payload.loginUrl}">Войти</a></p>`,
       };
+    case 'PURCHASE_ORDER_CONFIRM':
+      return {
+        subject: `Заказ поставщику ${payload.poNumber} — LeanStock`,
+        text: `PO ${payload.poNumber} для поставщика ${payload.supplier}.\nПозиций: ${payload.totalItems}\n${(payload.lines || [])
+          .map((l) => `- ${l.name} (${l.sku}): ${l.quantity} x ${l.unitCost}`)
+          .join('\n')}`,
+        html: `<p>Заказ <b>${payload.poNumber}</b> → ${payload.supplier}</p><ul>${(payload.lines || [])
+          .map((l) => `<li>${l.name} (${l.sku}): ${l.quantity} × ${l.unitCost}</li>`)
+          .join('')}</ul>`,
+      };
     default:
       return {
         subject: 'LeanStock notification',

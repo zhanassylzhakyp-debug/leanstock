@@ -13,7 +13,12 @@ const tenantRoutes = require('./modules/tenants/tenants.routes');
 const productRoutes = require('./modules/products/products.routes');
 const locationRoutes = require('./modules/locations/locations.routes');
 const inventoryRoutes = require('./modules/inventory/inventory.routes');
+const forecastRoutes = require('./modules/forecast/forecast.routes');
+const reservationRoutes = require('./modules/reservations/reservations.routes');
+const supplierRoutes = require('./modules/suppliers/suppliers.routes');
+const purchaseOrderRoutes = require('./modules/purchase-orders/purchase-orders.routes');
 const adminRoutes = require('./modules/admin/admin.routes');
+const decayRulesRoutes = require('./modules/admin/decay-rules.routes');
 
 const env = require('./config/env');
 
@@ -43,7 +48,12 @@ app.use('/api/v1/tenants', tenantRoutes);
 app.use('/api/v1/products', productRoutes);
 app.use('/api/v1/locations', locationRoutes);
 app.use('/api/v1/inventory', inventoryRoutes);
+app.use('/api/v1/inventory/forecast', forecastRoutes);
+app.use('/api/v1/reservations', reservationRoutes);
+app.use('/api/v1/suppliers', supplierRoutes);
+app.use('/api/v1/purchase-orders', purchaseOrderRoutes);
 app.use('/api/v1/admin', adminRoutes);
+app.use('/api/v1/admin', decayRulesRoutes);
 
 app.use((req, res) => {
   res.status(404).json({

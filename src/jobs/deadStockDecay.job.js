@@ -34,7 +34,16 @@ const startScheduledJobs = () => {
     }
   });
 
-  logger.info('Cron: 02:00 dead-stock-decay, 08:00 low-stock-scan → Redis queues');
+  cron.schedule('*/5 * * * *', async () => {
+    logger.info('Enqueue reservation-expiry');
+    try {
+      await enqueueMaintenanceJob('reservation-expiry');
+    } catch (err) {
+      logger.error('enqueue reservation-expiry failed', { error: err.message });
+    }
+  });
+
+  logger.info('Cron: 02:00 dead-stock-decay, 08:00 low-stock-scan, */5 reservation-expiry → Redis queues');
 };
 
 module.exports = { startScheduledJobs };

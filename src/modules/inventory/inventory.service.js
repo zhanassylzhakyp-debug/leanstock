@@ -221,10 +221,34 @@ const calculateDecayDiscount = (lastSoldAt, rules = {}) => {
 };
 
 const applyDeadStockDecay = async () => {
-  const allInventory = await prisma.inventory.findMany({ where: { quantity: { gt: 0 } } });
+  const allInventory = await prisma.inventory.findMany({
+    where: { quantity: { gt: 0 } },
+    include: { product: { select: { tenantId: true } } },
+  });
+
+  const rulesCache = new Map();
   let updated = 0;
+
   for (const inv of allInventory) {
-    const newDiscount = calculateDecayDiscount(inv.lastSoldAt);
+    const tenantId = inv.product.tenantId;
+    if (!rulesCache.has(tenantId)) {
+      const rules = await prisma.tenantDecayRules.findUnique({ where: { tenantId } });
+      rulesCache.set(tenantId, rules || {});
+    }
+    const rules = rulesCache.get(tenantId);
+    const ruleObj = rules.id
+      ? {
+          tier1Days: rules.tier1Days,
+          tier2Days: rules.tier2Days,
+          tier3Days: rules.tier3Days,
+          tier1Discount: Number(rules.tier1Discount),
+          tier2Discount: Number(rules.tier2Discount),
+          tier3Discount: Number(rules.tier3Discount),
+          maxDiscount: Number(rules.maxDiscount),
+        }
+      : {};
+
+    const newDiscount = calculateDecayDiscount(inv.lastSoldAt, ruleObj);
     if (newDiscount !== Number(inv.discountPct)) {
       await prisma.inventory.update({ where: { id: inv.id }, data: { discountPct: newDiscount } });
       updated++;
