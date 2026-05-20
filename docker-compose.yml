@@ -32,8 +32,8 @@ services:
     environment:
       PORT: ${BACKEND_PORT:-3000}
       NODE_ENV: ${ENVIRONMENT:-production}
-      DATABASE_URL: "postgres://postgres:08b4f13674e57e14ad5cf270788f2615@dokku-postgres-zhanassylzhakyp-debug-leanstock-postgres:5432/zhanassylzhakyp_debug_leanstock_postgres"
-      REDIS_URL: "redis://:7cd28f74bf559876add9632c79b75389d20dd7b09772bafa23f5821af2e61263@dokku-redis-zhanassylzhakyp-debug-leanstock-redis:6379"
+      DATABASE_URL: ${DOKKU_POSTGRES_AQUA_URL:-postgresql://postgres:1234@postgres:5432/leanstock} 
+      REDIS_URL: ${DOKKU_REDIS_AQUA_URL:-redis://redis:6379}
       JWT_ACCESS_SECRET: ${JWT_SECRET_KEY:-change_me_min_16_chars_access}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET_KEY:-change_me_min_16_chars_refresh}
       ALLOWED_ORIGINS: ${CORS_ORIGINS:-http://localhost:8080}
@@ -59,8 +59,8 @@ services:
     command: sh -c "sleep 20 && npx prisma migrate deploy && node src/workers/index.js"
     environment:
       NODE_ENV: ${ENVIRONMENT:-production}
-      DATABASE_URL: "postgres://postgres:08b4f13674e57e14ad5cf270788f2615@dokku-postgres-zhanassylzhakyp-debug-leanstock-postgres:5432/zhanassylzhakyp_debug_leanstock_postgres"
-      REDIS_URL: "redis://:7cd28f74bf559876add9632c79b75389d20dd7b09772bafa23f5821af2e61263@dokku-redis-zhanassylzhakyp-debug-leanstock-redis:6379"
+      DATABASE_URL: ${DOKKU_POSTGRES_AQUA_URL:-postgresql://postgres:1234@postgres:5432/leanstock}
+      REDIS_URL: ${DOKKU_REDIS_AQUA_URL:-redis://redis:6379}
       JWT_ACCESS_SECRET: ${JWT_SECRET_KEY:-change_me_min_16_chars_access}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET_KEY:-change_me_min_16_chars_refresh}
       ALLOWED_ORIGINS: ${CORS_ORIGINS:-http://localhost:8080}
