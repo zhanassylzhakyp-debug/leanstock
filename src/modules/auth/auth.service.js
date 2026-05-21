@@ -65,8 +65,8 @@ const register = async ({ email, username, password, tenantId, role }) => {
       email,
       username,
       passwordHash,
-      tenantId,
-      role: 'UserRole',
+      tenantId: tenant.id,
+      role: 'userRole',
       ...(shouldSkipEmailVerification() ? { emailVerifiedAt: new Date() } : {}),
     },
     select: {
