@@ -44,12 +44,19 @@ const shouldSkipEmailVerification = () =>
   env.NODE_ENV === 'test' || env.SKIP_EMAIL_VERIFICATION === 'true';
 
 const register = async ({ email, username, password, tenantId, role }) => {
-  const tenant = await prisma.tenant.findUnique({ where: { id: tenantId } });
-  if (!tenant) throw new AppError('Tenant not found', 404);
-
-  if (role && role !== 'USER') {
-    throw new AppError('Public registration may only create USER accounts', 403);
+  let tenant;
+  if (tenantId) {
+    tenant = await prisma.tenant.findUnique({ where: { id: tenantId } });
+    if (!tenant) throw new AppError('Tenant not found', 404);
+  } else {
+    const slug = username.toLowerCase().replace(/[^a-z0-9]/g, '-') + '-' + Date.now();
+    tenant = await prisma.tenant.create({
+      data: { name: `${username}'s Organization`, slug },
+    });
   }
+
+  const allowedRoles = ['USER', 'MANAGER'];
+  const userRole = allowedRoles.includes(role) ? role : 'USER';
 
   const passwordHash = await hashPassword(password);
 
@@ -59,7 +66,7 @@ const register = async ({ email, username, password, tenantId, role }) => {
       username,
       passwordHash,
       tenantId,
-      role: 'USER',
+      role: 'UserRole',
       ...(shouldSkipEmailVerification() ? { emailVerifiedAt: new Date() } : {}),
     },
     select: {
