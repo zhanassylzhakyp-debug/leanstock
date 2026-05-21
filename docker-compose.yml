@@ -28,12 +28,12 @@ services:
   api:
     build: .
     restart: always
-    command: sh entrypoint.sh
+    command: sh -c "npx prisma migrate deploy && node prisma/seed.js && node src/server.js"
     environment:
       PORT: ${BACKEND_PORT:-3000}
       NODE_ENV: ${ENVIRONMENT:-production}
-      DATABASE_URL: ${DOKKU_POSTGRES_AQUA_URL:-postgresql://postgres:1234@postgres:5432/leanstock} 
-      REDIS_URL: ${DOKKU_REDIS_AQUA_URL:-redis://redis:6379}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:1234@postgres:5432/leanstock}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
       JWT_ACCESS_SECRET: ${JWT_SECRET_KEY:-change_me_min_16_chars_access}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET_KEY:-change_me_min_16_chars_refresh}
       ALLOWED_ORIGINS: ${CORS_ORIGINS:-http://localhost:8080}
@@ -56,11 +56,11 @@ services:
   worker:
     build: .
     restart: always
-    command: sh entrypoint-worker.sh
+    command: sh -c "npx prisma migrate deploy && node src/workers/index.js"
     environment:
       NODE_ENV: ${ENVIRONMENT:-production}
-      DATABASE_URL: ${DOKKU_POSTGRES_AQUA_URL:-postgresql://postgres:1234@postgres:5432/leanstock}
-      REDIS_URL: ${DOKKU_REDIS_AQUA_URL:-redis://redis:6379}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:1234@postgres:5432/leanstock}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
       JWT_ACCESS_SECRET: ${JWT_SECRET_KEY:-change_me_min_16_chars_access}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET_KEY:-change_me_min_16_chars_refresh}
       ALLOWED_ORIGINS: ${CORS_ORIGINS:-http://localhost:8080}
