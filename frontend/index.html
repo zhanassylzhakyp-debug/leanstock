@@ -1,154 +1,1131 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>LeanStock Demo</title>
-  <link rel="stylesheet" href="styles.css" />
+  <title>LeanStock — Inventory OS</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0a0a0a;
+      --bg2: #111111;
+      --bg3: #1a1a1a;
+      --border: #2a2a2a;
+      --accent: #e8ff47;
+      --accent2: #ff6b35;
+      --text: #f0f0f0;
+      --text2: #888;
+      --text3: #444;
+      --green: #4ade80;
+      --red: #f87171;
+      --blue: #60a5fa;
+      --radius: 2px;
+      --font-mono: 'Space Mono', monospace;
+      --font-display: 'Syne', sans-serif;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 13px;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── GRID BACKGROUND ── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(232,255,71,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(232,255,71,0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── HEADER ── */
+    header {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      background: rgba(10,10,10,0.95);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      height: 56px;
+    }
+
+    .logo {
+      font-family: var(--font-display);
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .logo-dot {
+      width: 8px; height: 8px;
+      background: var(--accent);
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.8); }
+    }
+
+    .logo span { color: var(--accent); }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    #user-badge {
+      display: none;
+      align-items: center;
+      gap: 8px;
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      padding: 4px 12px;
+      border-radius: var(--radius);
+      font-size: 11px;
+      color: var(--text2);
+    }
+
+    #user-badge .role-tag {
+      background: var(--accent);
+      color: #000;
+      padding: 1px 6px;
+      font-size: 10px;
+      font-weight: 700;
+      border-radius: 2px;
+      text-transform: uppercase;
+    }
+
+    /* ── LAYOUT ── */
+    .app-layout {
+      display: flex;
+      padding-top: 56px;
+      min-height: 100vh;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* ── SIDEBAR ── */
+    sidebar {
+      width: 220px;
+      min-height: calc(100vh - 56px);
+      background: var(--bg2);
+      border-right: 1px solid var(--border);
+      position: fixed;
+      top: 56px;
+      left: 0;
+      bottom: 0;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .sidebar-section {
+      padding: 16px 12px 8px;
+    }
+
+    .sidebar-label {
+      font-size: 9px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--text3);
+      padding: 0 8px;
+      margin-bottom: 4px;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 8px;
+      border-radius: var(--radius);
+      cursor: pointer;
+      color: var(--text2);
+      transition: all 0.15s;
+      border: 1px solid transparent;
+      width: 100%;
+      background: none;
+      text-align: left;
+      font-family: var(--font-mono);
+      font-size: 12px;
+    }
+
+    .nav-item:hover {
+      background: var(--bg3);
+      color: var(--text);
+      border-color: var(--border);
+    }
+
+    .nav-item.active {
+      background: var(--accent);
+      color: #000;
+      font-weight: 700;
+      border-color: var(--accent);
+    }
+
+    .nav-item .icon {
+      font-size: 14px;
+      width: 18px;
+      text-align: center;
+    }
+
+    .sidebar-footer {
+      margin-top: auto;
+      padding: 12px;
+      border-top: 1px solid var(--border);
+    }
+
+    /* ── MAIN CONTENT ── */
+    main {
+      flex: 1;
+      margin-left: 220px;
+      padding: 32px;
+      min-height: calc(100vh - 56px);
+    }
+
+    /* ── VIEWS ── */
+    .view { display: none; animation: fadeIn 0.2s ease; }
+    .view.active { display: block; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── PAGE HEADER ── */
+    .page-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 32px;
+      padding-bottom: 24px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .page-title {
+      font-family: var(--font-display);
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: -1px;
+    }
+
+    .page-subtitle {
+      color: var(--text2);
+      font-size: 12px;
+      margin-top: 4px;
+    }
+
+    /* ── CARDS ── */
+    .card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+    }
+
+    .card-title {
+      font-family: var(--font-display);
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* ── STATS GRID ── */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+
+    .stat-card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      padding: 20px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: var(--accent);
+    }
+
+    .stat-value {
+      font-family: var(--font-display);
+      font-size: 32px;
+      font-weight: 800;
+      letter-spacing: -2px;
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+
+    .stat-label {
+      font-size: 10px;
+      color: var(--text2);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    /* ── TABLE ── */
+    .table-wrap {
+      overflow-x: auto;
+      border: 1px solid var(--border);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    thead th {
+      background: var(--bg3);
+      padding: 10px 16px;
+      text-align: left;
+      font-size: 10px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--text2);
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+
+    tbody tr {
+      border-bottom: 1px solid var(--border);
+      transition: background 0.1s;
+    }
+
+    tbody tr:hover { background: var(--bg3); }
+    tbody tr:last-child { border-bottom: none; }
+
+    tbody td {
+      padding: 10px 16px;
+      color: var(--text);
+      font-size: 12px;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      font-size: 10px;
+      font-weight: 700;
+      border-radius: 2px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .badge-green { background: rgba(74,222,128,0.15); color: var(--green); border: 1px solid rgba(74,222,128,0.3); }
+    .badge-red { background: rgba(248,113,113,0.15); color: var(--red); border: 1px solid rgba(248,113,113,0.3); }
+    .badge-yellow { background: rgba(232,255,71,0.15); color: var(--accent); border: 1px solid rgba(232,255,71,0.3); }
+    .badge-blue { background: rgba(96,165,250,0.15); color: var(--blue); border: 1px solid rgba(96,165,250,0.3); }
+    .badge-orange { background: rgba(255,107,53,0.15); color: var(--accent2); border: 1px solid rgba(255,107,53,0.3); }
+
+    /* ── FORMS ── */
+    .form-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: flex-end;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    label {
+      font-size: 10px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--text2);
+    }
+
+    input, select {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 8px 12px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      border-radius: var(--radius);
+      outline: none;
+      transition: border-color 0.15s;
+      min-width: 160px;
+    }
+
+    input:focus, select:focus {
+      border-color: var(--accent);
+    }
+
+    input::placeholder { color: var(--text3); }
+
+    /* ── BUTTONS ── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 700;
+      border: 1px solid;
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: all 0.15s;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      white-space: nowrap;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #000;
+      border-color: var(--accent);
+    }
+
+    .btn-primary:hover {
+      background: #d4e840;
+      transform: translateY(-1px);
+    }
+
+    .btn-secondary {
+      background: transparent;
+      color: var(--text);
+      border-color: var(--border);
+    }
+
+    .btn-secondary:hover {
+      border-color: var(--text2);
+      background: var(--bg3);
+    }
+
+    .btn-danger {
+      background: transparent;
+      color: var(--red);
+      border-color: rgba(248,113,113,0.3);
+    }
+
+    .btn-danger:hover {
+      background: rgba(248,113,113,0.1);
+    }
+
+    .btn-sm {
+      padding: 4px 10px;
+      font-size: 10px;
+    }
+
+    /* ── AUTH PAGE ── */
+    #auth-view {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: calc(100vh - 56px);
+      margin-left: -220px;
+    }
+
+    .auth-box {
+      width: 400px;
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      padding: 40px;
+    }
+
+    .auth-title {
+      font-family: var(--font-display);
+      font-size: 22px;
+      font-weight: 800;
+      margin-bottom: 4px;
+    }
+
+    .auth-sub {
+      color: var(--text2);
+      font-size: 11px;
+      margin-bottom: 28px;
+    }
+
+    .auth-tabs {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 24px;
+    }
+
+    .auth-tab {
+      padding: 8px 16px;
+      background: none;
+      border: none;
+      color: var(--text2);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .auth-tab.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+
+    .auth-form { display: none; }
+    .auth-form.active { display: flex; flex-direction: column; gap: 12px; }
+
+    .auth-form input {
+      width: 100%;
+    }
+
+    .hint {
+      font-size: 10px;
+      color: var(--text2);
+      margin-top: -4px;
+    }
+
+    /* ── MESSAGES ── */
+    .msg {
+      padding: 10px 16px;
+      border-radius: var(--radius);
+      font-size: 12px;
+      margin-top: 12px;
+      display: none;
+    }
+
+    .msg.show { display: block; }
+    .msg.success { background: rgba(74,222,128,0.1); border: 1px solid rgba(74,222,128,0.3); color: var(--green); }
+    .msg.error { background: rgba(248,113,113,0.1); border: 1px solid rgba(248,113,113,0.3); color: var(--red); }
+    .msg.info { background: rgba(232,255,71,0.1); border: 1px solid rgba(232,255,71,0.3); color: var(--accent); }
+
+    /* ── SECTION HEADER ── */
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    .section-title {
+      font-family: var(--font-display);
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    /* ── LOADING ── */
+    .loading {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--text2);
+      padding: 32px;
+      justify-content: center;
+    }
+
+    .spinner {
+      width: 16px; height: 16px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── EMPTY STATE ── */
+    .empty {
+      text-align: center;
+      padding: 48px;
+      color: var(--text3);
+    }
+
+    .empty-icon { font-size: 32px; margin-bottom: 8px; }
+
+    /* ── TERMINAL OUTPUT ── */
+    .terminal {
+      background: #000;
+      border: 1px solid var(--border);
+      padding: 16px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--green);
+      min-height: 100px;
+      max-height: 300px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+    }
+
+    /* ── INVENTORY ALERT ── */
+    .alert-row td:first-child {
+      border-left: 2px solid var(--red);
+    }
+
+    /* ── SCROLLBAR ── */
+    ::-webkit-scrollbar { width: 4px; height: 4px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--text3); }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 768px) {
+      sidebar { display: none; }
+      main { margin-left: 0; padding: 16px; }
+      #auth-view { margin-left: 0; }
+    }
+  </style>
 </head>
 <body>
-  <header>
-    <h1>LeanStock</h1>
-    <p class="tagline">Multi-tenant inventory management demo</p>
-    <div id="user-bar" class="hidden">
-      <span id="user-info"></span>
-      <button id="logout-btn" class="secondary">Logout</button>
+
+<header>
+  <div class="logo">
+    <div class="logo-dot"></div>
+    Lean<span>Stock</span>
+  </div>
+  <div class="header-right">
+    <div id="user-badge">
+      <span id="user-name"></span>
+      <span id="user-role" class="role-tag"></span>
+      <button class="btn btn-secondary btn-sm" id="logout-btn">Exit</button>
     </div>
-  </header>
+    <a href="/docs" target="_blank" class="btn btn-secondary btn-sm">API Docs ↗</a>
+  </div>
+</header>
+
+<div class="app-layout">
+
+  <sidebar id="sidebar" style="display:none">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Main</div>
+      <button class="nav-item active" data-view="dashboard">
+        <span class="icon">◈</span> Dashboard
+      </button>
+      <button class="nav-item" data-view="products">
+        <span class="icon">⬡</span> Products
+      </button>
+      <button class="nav-item" data-view="inventory">
+        <span class="icon">≡</span> Inventory
+      </button>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Operations</div>
+      <button class="nav-item" data-view="transfer">
+        <span class="icon">⇄</span> Transfer
+      </button>
+      <button class="nav-item" data-view="reservations">
+        <span class="icon">◉</span> Reservations
+      </button>
+      <button class="nav-item" data-view="forecast">
+        <span class="icon">△</span> Forecast
+      </button>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Procurement</div>
+      <button class="nav-item" data-view="suppliers">
+        <span class="icon">◎</span> Suppliers & PO
+      </button>
+    </div>
+    <div class="sidebar-section" id="admin-nav-section" style="display:none">
+      <div class="sidebar-label">System</div>
+      <button class="nav-item" data-view="admin">
+        <span class="icon">⚙</span> Admin
+      </button>
+    </div>
+    <div class="sidebar-footer">
+      <div style="font-size:10px;color:var(--text3)">LEANSTOCK v1.0.0</div>
+    </div>
+  </sidebar>
 
   <main>
-    <section id="auth-section" class="card">
-      <h2>Authentication</h2>
-      <div class="tabs">
-        <button class="tab active" data-tab="login">Login</button>
-        <button class="tab" data-tab="register">Register</button>
-        <button class="tab" data-tab="reset">Password Reset</button>
-      </div>
-      <div id="login-panel" class="panel">
-        <input id="login-email" type="email" placeholder="Email" />
-        <input id="login-password" type="password" placeholder="Password" />
-        <button id="login-btn">Login</button>
-      </div>
-      <div id="register-panel" class="panel hidden">
-        <input id="reg-email" type="email" placeholder="Email" />
-        <input id="reg-username" type="text" placeholder="Username" />
-        <input id="reg-password" type="password" placeholder="Password (8+ chars, A-Z, 0-9)" />
-        <input id="reg-tenant-id" type="text" placeholder="Tenant ID (from seed or admin)" />
-        <button id="register-btn">Register</button>
-        <p class="hint">After register check your email for verification link.</p>
-      </div>
-      <div id="reset-panel" class="panel hidden">
-        <input id="reset-email" type="email" placeholder="Email for reset link" />
-        <button id="forgot-btn">Send reset email</button>
-      </div>
-      <div id="auth-message" class="message"></div>
-    </section>
 
-    <section id="app-section" class="hidden">
-      <nav class="nav">
-        <button class="nav-btn active" data-view="dashboard">Dashboard</button>
-        <button class="nav-btn" data-view="products">Products</button>
-        <button class="nav-btn" data-view="inventory">Inventory</button>
-        <button class="nav-btn" data-view="transfer">Transfer</button>
-        <button class="nav-btn" data-view="reservations">Reservations</button>
-        <button class="nav-btn" data-view="suppliers">Suppliers & PO</button>
-        <button class="nav-btn" data-view="forecast">Forecast</button>
-        <button class="nav-btn admin-only hidden" data-view="admin">Admin</button>
-      </nav>
-
-      <div id="dashboard-view" class="view">
-        <h2>Dashboard</h2>
-        <div id="stats" class="grid"></div>
-      </div>
-
-      <div id="products-view" class="view hidden">
-        <h2>Products</h2>
-        <div class="admin-only hidden form-row">
-          <input id="new-sku" placeholder="SKU" />
-          <input id="new-name" placeholder="Name" />
-          <input id="new-price" type="number" placeholder="Price" step="0.01" />
-          <input id="new-cost" type="number" placeholder="Cost" step="0.01" />
-          <button id="create-product-btn">Create Product</button>
+    <!-- AUTH VIEW -->
+    <div id="auth-view" class="view active">
+      <div class="auth-box">
+        <div class="auth-title">Inventory OS</div>
+        <div class="auth-sub">Sign in to manage your stock</div>
+        <div class="auth-tabs">
+          <button class="auth-tab active" data-form="login">Login</button>
+          <button class="auth-tab" data-form="register">Register</button>
+          <button class="auth-tab" data-form="reset">Reset</button>
         </div>
-        <div id="products-list"></div>
-      </div>
 
-      <div id="inventory-view" class="view hidden">
-        <h2>Inventory Report</h2>
-        <button id="refresh-inventory">Refresh</button>
-        <div id="inventory-list"></div>
-      </div>
-
-      <div id="transfer-view" class="view hidden">
-        <h2>Transfer / Sale</h2>
-        <div class="form-grid">
-          <input id="tr-product-id" placeholder="Product ID" />
-          <input id="tr-from-loc" placeholder="From Location ID" />
-          <input id="tr-to-loc" placeholder="To Location ID" />
-          <input id="tr-qty" type="number" placeholder="Quantity" min="1" />
-          <button id="transfer-btn">Transfer</button>
-          <button id="sale-btn" class="secondary">Record Sale</button>
+        <div class="auth-form active" id="form-login">
+          <div class="form-group">
+            <label>Email</label>
+            <input id="login-email" type="email" placeholder="you@company.com" />
+          </div>
+          <div class="form-group">
+            <label>Password</label>
+            <input id="login-password" type="password" placeholder="••••••••" />
+          </div>
+          <button class="btn btn-primary" id="login-btn">→ Sign In</button>
         </div>
-        <div id="transfer-result" class="message"></div>
-      </div>
 
-      <div id="reservations-view" class="view hidden">
-        <h2>Checkout Reservations</h2>
-        <div class="form-grid">
-          <input id="res-product-id" placeholder="Product ID" />
-          <input id="res-location-id" placeholder="Location ID" />
-          <input id="res-qty" type="number" placeholder="Qty" min="1" />
-          <button id="reserve-btn">Reserve (Redis lock)</button>
+        <div class="auth-form" id="form-register">
+          <div class="form-group">
+            <label>Email</label>
+            <input id="reg-email" type="email" placeholder="you@company.com" />
+          </div>
+          <div class="form-group">
+            <label>Username</label>
+            <input id="reg-username" type="text" placeholder="johndoe" />
+          </div>
+          <div class="form-group">
+            <label>Password</label>
+            <input id="reg-password" type="password" placeholder="Min 8 chars, A-Z, 0-9" />
+          </div>
+          <div class="form-group">
+            <label>Tenant ID</label>
+            <input id="reg-tenant-id" type="text" placeholder="From seed data or admin" />
+          </div>
+          <button class="btn btn-primary" id="register-btn">→ Create Account</button>
+          <div class="hint">Check email for verification link after signup</div>
         </div>
-        <div id="reservations-list"></div>
-      </div>
 
-      <div id="suppliers-view" class="view hidden">
-        <h2>Suppliers & Purchase Orders</h2>
-        <div class="form-grid manager-only">
-          <input id="sup-name" placeholder="Supplier name" />
-          <input id="sup-email" placeholder="Supplier email" />
-          <button id="create-supplier-btn">Add Supplier</button>
+        <div class="auth-form" id="form-reset">
+          <div class="form-group">
+            <label>Email</label>
+            <input id="reset-email" type="email" placeholder="your@email.com" />
+          </div>
+          <button class="btn btn-primary" id="forgot-btn">→ Send Reset Link</button>
         </div>
-        <div id="suppliers-list"></div>
-        <hr />
-        <h3>Create Purchase Order</h3>
-        <div class="form-grid manager-only">
-          <input id="po-supplier-id" placeholder="Supplier ID" />
-          <input id="po-location-id" placeholder="Receive Location ID" />
-          <input id="po-product-id" placeholder="Product ID" />
-          <input id="po-qty" type="number" placeholder="Qty" min="1" />
-          <input id="po-cost" type="number" placeholder="Unit cost" step="0.01" />
-          <button id="create-po-btn">Create PO (DRAFT)</button>
+
+        <div class="msg" id="auth-msg"></div>
+      </div>
+    </div>
+
+    <!-- DASHBOARD VIEW -->
+    <div id="dashboard-view" class="view">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Dashboard</div>
+          <div class="page-subtitle">Real-time inventory overview</div>
         </div>
-        <div id="po-list"></div>
+        <button class="btn btn-secondary" id="refresh-dashboard">↻ Refresh</button>
       </div>
-
-      <div id="forecast-view" class="view hidden">
-        <h2>Reorder Forecast (Moving Average)</h2>
-        <button id="load-forecast">Load Forecast</button>
-        <div id="forecast-list"></div>
-      </div>
-
-      <div id="admin-view" class="view hidden">
-        <h2>Admin Panel</h2>
-        <div class="form-grid">
-          <button id="trigger-decay">Trigger Dead Stock Decay</button>
-          <button id="trigger-low-stock">Trigger Low Stock Scan</button>
-          <button id="load-queue-stats">Queue Stats</button>
+      <div class="stats-grid" id="stats-grid">
+        <div class="stat-card">
+          <div class="stat-value" id="stat-products">—</div>
+          <div class="stat-label">Products</div>
         </div>
-        <pre id="admin-output"></pre>
+        <div class="stat-card">
+          <div class="stat-value" id="stat-locations">—</div>
+          <div class="stat-label">Locations</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="stat-low-stock">—</div>
+          <div class="stat-label">Low Stock</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="stat-value">—</div>
+          <div class="stat-label">Total Value</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">⚡ Recent Activity</div>
+        <div id="activity-list"><div class="loading"><div class="spinner"></div> Loading...</div></div>
+      </div>
+    </div>
+
+    <!-- PRODUCTS VIEW -->
+    <div id="products-view" class="view">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Products</div>
+          <div class="page-subtitle">Catalog management</div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-secondary" id="refresh-products">↻ Refresh</button>
+          <button class="btn btn-primary manager-only" id="show-create-product">+ New Product</button>
+        </div>
       </div>
 
-      <div id="app-message" class="message"></div>
-    </section>
+      <div class="card manager-only" id="create-product-card" style="display:none;margin-bottom:24px">
+        <div class="card-title">New Product</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>SKU</label>
+            <input id="new-sku" placeholder="PROD-001" />
+          </div>
+          <div class="form-group">
+            <label>Name</label>
+            <input id="new-name" placeholder="Product Name" />
+          </div>
+          <div class="form-group">
+            <label>Price</label>
+            <input id="new-price" type="number" placeholder="0.00" step="0.01" />
+          </div>
+          <div class="form-group">
+            <label>Cost</label>
+            <input id="new-cost" type="number" placeholder="0.00" step="0.01" />
+          </div>
+          <div class="form-group">
+            <label>Min Stock</label>
+            <input id="new-min-stock" type="number" placeholder="10" />
+          </div>
+          <div style="display:flex;gap:8px;align-items:flex-end">
+            <button class="btn btn-primary" id="create-product-btn">Create</button>
+            <button class="btn btn-secondary" id="cancel-create-product">Cancel</button>
+          </div>
+        </div>
+        <div class="msg" id="product-msg"></div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>SKU</th>
+              <th>Name</th>
+              <th>Price</th>
+              <th>Cost</th>
+              <th>Min Stock</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="products-tbody">
+            <tr><td colspan="6"><div class="loading"><div class="spinner"></div> Loading...</div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- INVENTORY VIEW -->
+    <div id="inventory-view" class="view">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Inventory</div>
+          <div class="page-subtitle">Stock levels across all locations</div>
+        </div>
+        <button class="btn btn-secondary" id="refresh-inventory">↻ Refresh</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Product</th>
+              <th>SKU</th>
+              <th>Location</th>
+              <th>Qty</th>
+              <th>Reserved</th>
+              <th>Available</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="inventory-tbody">
+            <tr><td colspan="7"><div class="loading"><div class="spinner"></div> Loading...</div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TRANSFER VIEW -->
+    <div id="transfer-view" class="view">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Transfer & Sales</div>
+          <div class="page-subtitle">Move stock between locations</div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
+        <div class="card">
+          <div class="card-title">⇄ Stock Transfer</div>
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <div class="form-group">
+              <label>Product ID</label>
+              <input id="tr-product-id" placeholder="uuid" style="width:100%" />
+            </div>
+            <div class="form-group">
+              <label>From Location</label>
+              <input id="tr-from-loc" placeholder="uuid" style="width:100%" />
+            </div>
+            <div class="form-group">
+              <label>To Location</label>
+              <input id="tr-to-loc" placeholder="uuid" style="width:100%" />
+            </div>
+            <div class="form-group">
+              <label>Quantity</label>
+              <input id="tr-qty" type="number" placeholder="1" min="1" style="width:100%" />
+            </div>
+            <button class="btn btn-primary" id="transfer-btn">→ Transfer</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">◉ Record Sale</div>
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <div class="form-group">
+              <label>Product ID</label>
+              <input id="sale-product-id" placeholder="uuid" style="width:100%" />
+            </div>
+            <div class="form-group">
+              <label>Location ID</label>
+              <input id="sale-location-id" placeholder="uuid" style="width:100%" />
+            </div>
+            <div class="form-group">
+              <label>Quantity</label>
+              <input id="sale-qty" type="number" placeholder="1" min="1" style="width:100%" />
+            </div>
+            <button class="btn btn-secondary" id="sale-btn">→ Record Sale</button>
+          </div>
+        </div>
+      </div>
+      <div class="msg" id="transfer-msg" style="margin-top:16px"></div>
+    </div>
+
+    <!-- RESERVATIONS VIEW -->
+    <div id="reservations-view" class="view">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Reservations</div>
+          <div class="page-subtitle">Redis-locked checkout reservations</div>
+        </div>
+        <button class="btn btn-secondary" id="refresh-reservations">↻ Refresh</button>
+      </div>
+      <div class="card" style="margin-bottom:24px">
+        <div class="card-title">+ New Reservation</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Product ID</label>
+            <input id="res-product-id" placeholder="uuid" />
+          </div>
+          <div class="form-group">
+            <label>Location ID</label>
+            <input id="res-location-id" placeholder="uuid" />
+          </div>
+          <div class="form-group">
+            <label>Quantity</label>
+            <input id="res-qty" type="number" placeholder="1" min="1" />
+          </div>
+          <div class="form-group">
+            <label>TTL (seconds)</label>
+            <input id="res-ttl" type="number" placeholder="900" value="900" />
+          </div>
+          <div style="display:flex;align-items:flex-end">
+            <button class="btn btn-primary" id="reserve-btn">Reserve</button>
+          </div>
+        </div>
+        <div class="msg" id="reservation-msg"></div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>ID</th><th>Product</th><th>Location</th><th>Qty</th><th>Expires</th><th>Status</th><th>Actions</th></tr>
+          </thead>
+          <tbody id="reservations-tbody">
+            <tr><td colspan="7"><div class="loading"><div class="spinner"></div> Loading...</div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- FORECAST VIEW -->
+    <div id="forecast-view" class="view">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Reorder Forecast</div>
+          <div class="page-subtitle">Moving average demand prediction</div>
+        </div>
+        <button class="btn btn-primary" id="load-forecast">△ Calculate Forecast</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Product</th><th>Current Qty</th><th>Avg Daily Usage</th><th>30-Day Demand</th><th>Suggested Order</th><th>Reorder?</th></tr>
+          </thead>
+          <tbody id="forecast-tbody">
+            <tr><td colspan="6"><div class="empty"><div class="empty-icon">△</div>Click "Calculate Forecast"</div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- SUPPLIERS VIEW -->
+    <div id="suppliers-view" class="view">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Suppliers & PO</div>
+          <div class="page-subtitle">Purchase order workflow</div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px">
+        <div class="card manager-only">
+          <div class="card-title">+ Add Supplier</div>
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <div class="form-group">
+              <label>Name</label>
+              <input id="sup-name" placeholder="Supplier Co." style="width:100%" />
+            </div>
+            <div class="form-group">
+              <label>Email</label>
+              <input id="sup-email" type="email" placeholder="supplier@co.com" style="width:100%" />
+            </div>
+            <div class="form-group">
+              <label>Lead Time (days)</label>
+              <input id="sup-lead" type="number" placeholder="5" style="width:100%" />
+            </div>
+            <button class="btn btn-primary" id="create-supplier-btn">Add Supplier</button>
+          </div>
+          <div class="msg" id="supplier-msg"></div>
+        </div>
+        <div class="card manager-only">
+          <div class="card-title">+ Create Purchase Order</div>
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <div class="form-group">
+              <label>Supplier ID</label>
+              <input id="po-supplier-id" placeholder="uuid" style="width:100%" />
+            </div>
+            <div class="form-group">
+              <label>Product ID</label>
+              <input id="po-product-id" placeholder="uuid" style="width:100%" />
+            </div>
+            <div class="form-group">
+              <label>Quantity</label>
+              <input id="po-qty" type="number" placeholder="100" style="width:100%" />
+            </div>
+            <div class="form-group">
+              <label>Unit Cost</label>
+              <input id="po-cost" type="number" placeholder="0.00" step="0.01" style="width:100%" />
+            </div>
+            <button class="btn btn-primary" id="create-po-btn">Create PO (Draft)</button>
+          </div>
+          <div class="msg" id="po-msg"></div>
+        </div>
+      </div>
+
+      <div class="section-header">
+        <div class="section-title">Suppliers</div>
+        <button class="btn btn-secondary btn-sm" id="refresh-suppliers">↻</button>
+      </div>
+      <div class="table-wrap" style="margin-bottom:24px">
+        <table>
+          <thead><tr><th>Name</th><th>Email</th><th>Lead Time</th><th>Created</th></tr></thead>
+          <tbody id="suppliers-tbody">
+            <tr><td colspan="4"><div class="loading"><div class="spinner"></div> Loading...</div></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="section-header">
+        <div class="section-title">Purchase Orders</div>
+        <button class="btn btn-secondary btn-sm" id="refresh-pos">↻</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>PO #</th><th>Supplier</th><th>Items</th><th>Status</th><th>Expected</th><th>Actions</th></tr></thead>
+          <tbody id="po-tbody">
+            <tr><td colspan="6"><div class="loading"><div class="spinner"></div> Loading...</div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ADMIN VIEW -->
+    <div id="admin-view" class="view">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Admin Panel</div>
+          <div class="page-subtitle">System controls & background jobs</div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px">
+        <div class="card">
+          <div class="card-title">🔄 Dead Stock Decay</div>
+          <p style="color:var(--text2);font-size:11px;margin-bottom:16px">Trigger recalculation of dead stock items</p>
+          <button class="btn btn-secondary" id="trigger-decay">Run Decay Job</button>
+        </div>
+        <div class="card">
+          <div class="card-title">📊 Low Stock Scan</div>
+          <p style="color:var(--text2);font-size:11px;margin-bottom:16px">Scan and alert on low inventory items</p>
+          <button class="btn btn-secondary" id="trigger-low-stock">Run Scan</button>
+        </div>
+        <div class="card">
+          <div class="card-title">⚡ Queue Stats</div>
+          <p style="color:var(--text2);font-size:11px;margin-bottom:16px">BullMQ job queue statistics</p>
+          <button class="btn btn-secondary" id="load-queue-stats">Load Stats</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">⬛ Output</div>
+        <div class="terminal" id="admin-output">// Output will appear here</div>
+      </div>
+    </div>
+
   </main>
+</div>
 
-  <footer>
-    <a href="/docs" target="_blank">Swagger API Docs</a> ·
-    <a href="/health" target="_blank">Health</a>
-  </footer>
+<script src="app.js"></script>
+<script>
+// ── UI CONTROLLER ──────────────────────────────────────────────────
+const API = window.API_BASE || '';
 
-  <script src="app.js"></script>
+// Auth tabs
+document.querySelectorAll('.auth-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.auth-form').forEach(f => f.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('form-' + tab.dataset.form).classList.add('active');
+  });
+});
+
+// Nav items
+document.querySelectorAll('.nav-item').forEach(item => {
+  item.addEventListener('click', () => {
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    item.classList.add('active');
+    showView(item.dataset.view);
+  });
+});
+
+function showView(name) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  const v = document.getElementById(name + '-view');
+  if (v) v.classList.add('active');
+  if (name === 'dashboard') loadDashboard();
+  if (name === 'products') loadProducts();
+  if (name === 'inventory') loadInventory();
+  if (name === 'reservations') loadReservations();
+  if (name === 'suppliers') { loadSuppliers(); loadPOs(); }
+}
+
+function showMsg(id, text, type='info') {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = text;
+  el.className = 'msg show ' + type;
+  setTimeout(() => el.classList.remove('show'), 5000);
+}
+
+// Create Product toggle
+document.getElementById('show-create-product')?.addEventListener('click', () => {
+  document.getElementById('create-product-card').style.display = 'block';
+});
+document.getElementById('cancel-create-product')?.addEventListener('click', () => {
+  document.getElementById('create-product-card').style.display = 'none';
+});
+</script>
 </body>
 </html>
