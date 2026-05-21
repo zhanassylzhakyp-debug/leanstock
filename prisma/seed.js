@@ -50,8 +50,43 @@ async function main() {
       emailVerifiedAt: new Date(),
     },
   });
+  // SUPER_ADMIN user (platform level)
+const superAdminHash = await argon2.hash('SuperAdmin1234');
+const superAdmin = await prisma.user.upsert({
+  where: { email: 'superadmin@leanstock.com' },
+  update: { emailVerifiedAt: new Date() },
+  create: {
+    email: 'superadmin@leanstock.com',
+    username: 'super_admin',
+    passwordHash: superAdminHash,
+    role: 'SUPER_ADMIN',
+    tenantId: tenant1.id,
+    emailVerifiedAt: new Date(),
+  },
+});
 
-  console.log('✅ Users created: admin@acme.com / Admin1234, user@acme.com / User1234');
+// MANAGER user for tenant1
+const managerHash = await argon2.hash('Manager1234');
+const manager = await prisma.user.upsert({
+  where: { email: 'manager@acme.com' },
+  update: { emailVerifiedAt: new Date() },
+  create: {
+    email: 'manager@acme.com',
+    username: 'acme_manager',
+    passwordHash: managerHash,
+    role: 'MANAGER',
+    tenantId: tenant1.id,
+    emailVerifiedAt: new Date(),
+  },
+});
+
+console.log('✅ All 4 roles seeded:');
+console.log('   SUPER_ADMIN: superadmin@leanstock.com / SuperAdmin1234');
+console.log('   ADMIN:       admin@acme.com / Admin1234');
+console.log('   MANAGER:     manager@acme.com / Manager1234');
+console.log('   USER:        user@acme.com / User1234');
+
+
 
   // Create locations for tenant1
   const warehouseA = await prisma.location.upsert({

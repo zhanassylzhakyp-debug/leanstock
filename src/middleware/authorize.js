@@ -2,14 +2,17 @@ const { error } = require('../utils/response');
 
 /**
  * RBAC middleware - enforces role restrictions
- * Returns 403 Forbidden (not 401) for wrong role
+ * SUPER_ADMIN bypasses all role checks
  */
 const authorize = (...roles) => {
   return (req, res, next) => {
     if (!req.user) {
       return error(res, 'Authentication required', 401);
     }
-
+    // SUPER_ADMIN has access to everything
+    if (req.user.role === 'SUPER_ADMIN') {
+      return next();
+    }
     if (!roles.includes(req.user.role)) {
       return error(
         res,
@@ -17,7 +20,6 @@ const authorize = (...roles) => {
         403
       );
     }
-
     next();
   };
 };
