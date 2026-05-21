@@ -28,7 +28,7 @@ services:
   api:
     build: .
     restart: always
-    command: sh -c "export DATABASE_URL=$DOKKU_POSTGRES_AQUA_URL && export REDIS_URL=$DOKKU_REDIS_AQUA_URL && sleep 5 && npx prisma migrate deploy && node prisma/seed.js && node src/server.js"
+    command: sh entrypoint.sh
     environment:
       PORT: ${BACKEND_PORT:-3000}
       NODE_ENV: ${ENVIRONMENT:-production}
@@ -56,7 +56,7 @@ services:
   worker:
     build: .
     restart: always
-    command: sh -c "export DATABASE_URL=$DOKKU_POSTGRES_AQUA_URL && export REDIS_URL=$DOKKU_REDIS_AQUA_URL && sleep 5 && npx prisma migrate deploy && node src/workers/index.js"
+    command: sh entrypoint-worker.sh
     environment:
       NODE_ENV: ${ENVIRONMENT:-production}
       DATABASE_URL: ${DOKKU_POSTGRES_AQUA_URL:-postgresql://postgres:1234@postgres:5432/leanstock}
